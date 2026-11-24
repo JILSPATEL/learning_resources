@@ -320,7 +320,40 @@ The lock objects should remain private implementation details in production
 code so outside code cannot accidentally acquire them and interfere with
 the synchronization.
 
-## 18. Nondeterminism and Thread Ordering
+## 18. Inter-Thread Communication with `wait()` and `notify()`
+
+**Example:** [InterThreadCommIII.java](./InterThreadCommIII.java)
+
+This example implements a one-slot producer-consumer buffer. The producer
+places one integer in `Box`, and the consumer removes it before the producer
+can place the next integer. The `flag` field represents the buffer state:
+
+- `false`: the buffer is empty, so the producer may write.
+- `true`: the buffer contains an item, so the consumer may read.
+
+Both methods are `synchronized`, which means they use the same `Box` monitor.
+Only one thread can inspect and update the buffer at a time. When a thread
+cannot continue, `wait()` releases the monitor and suspends it instead of
+using CPU in a busy-wait loop. `notify()` wakes one waiting thread after the
+buffer state changes.
+
+The condition is checked inside a `while` loop rather than an `if` statement.
+A thread can wake up before its condition is true, or another thread can
+acquire the monitor first, so the condition must always be verified again.
+`InterThreadCommI.java` shows the uncoordinated version, while
+`InterThreadCommII.java` shows busy waiting; this example demonstrates the
+monitor-based approach.
+
+### Methods and concepts used
+
+- `synchronized` protects the shared buffer and provides monitor ownership.
+- `wait()` releases the monitor and waits for a notification.
+- `notify()` signals one thread waiting on the same monitor.
+- `volatile` makes the state fields visible across threads, although the
+  `synchronized` methods already provide the coordination needed here.
+- `InterruptedException` is declared because `wait()` can be interrupted.
+
+## 19. Nondeterminism and Thread Ordering
 
 Threads do not execute in a predictable order merely because they are created
 or started in sequence. `ThreadId.java`, `NonDeterminism.java`, and
